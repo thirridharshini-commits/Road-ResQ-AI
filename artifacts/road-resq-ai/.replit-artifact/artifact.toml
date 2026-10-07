@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Road ResQ AI"
+description = "A roadside rescue web app that helps stranded travelers report vehicle problems, review probable AI triage, match with verified responders, activate safety options, and track their rescue."
+version = "1.0.0"
+id = "artifacts/road-resq-ai"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 25042
+
+[services.development]
+run = "pnpm --filter @workspace/road-resq-ai run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/road-resq-ai", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/road-resq-ai/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25042"
+BASE_PATH = "/"
