@@ -3,13 +3,15 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Road ResQ AI rescue coordination API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: rescue
+    description: Roadside rescue coordination
 paths:
   /healthz:
     get:
@@ -24,6 +26,187 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /road-resq/overview:
+    get:
+      operationId: getRescueOverview
+      tags: [rescue]
+      summary: Get rescue dashboard summary
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RescueOverview"
+  /road-resq/responders:
+    get:
+      operationId: listRescueResponders
+      tags: [rescue]
+      summary: List verified rescue responders
+      responses:
+        "200":
+          description: Verified responders only
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RescueResponder"
+  /road-resq/triage:
+    post:
+      operationId: triageRescue
+      tags: [rescue]
+      summary: Classify a reported roadside problem using cautious demo rules
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RescueTriageInput"
+      responses:
+        "200":
+          description: Probable issue classification with safety guidance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RescueTriage"
+  /road-resq/matches:
+    post:
+      operationId: matchResponders
+      tags: [rescue]
+      summary: Rank suitable verified responders
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResponderMatchInput"
+      responses:
+        "200":
+          description: Responders ranked by suitability and safety preferences
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ResponderMatch"
+  /road-resq/requests:
+    get:
+      operationId: listRescueRequests
+      tags: [rescue]
+      summary: List recent rescue requests
+      responses:
+        "200":
+          description: Rescue request history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RescueRequest"
+    post:
+      operationId: createRescueRequest
+      tags: [rescue]
+      summary: Dispatch a verified responder for roadside assistance
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RescueRequestInput"
+      responses:
+        "201":
+          description: Rescue request created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RescueRequest"
+  /road-resq/requests/{id}:
+    get:
+      operationId: getRescueRequest
+      tags: [rescue]
+      summary: Get a rescue request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Rescue request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RescueRequest"
+        "404":
+          description: Request not found
+  /road-resq/requests/{id}/status:
+    patch:
+      operationId: updateRescueStatus
+      tags: [rescue]
+      summary: Update rescue status from the responder console
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RescueStatusInput"
+      responses:
+        "200":
+          description: Updated request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RescueRequest"
+  /road-resq/requests/{id}/replan:
+    post:
+      operationId: replanRescue
+      tags: [rescue]
+      summary: Re-plan a failed roadside repair to towing assistance
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RescueReplanInput"
+      responses:
+        "200":
+          description: Rescue updated with a towing plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RescueRequest"
+  /road-resq/sos:
+    post:
+      operationId: activateRescueSos
+      tags: [rescue]
+      summary: Record an SOS event and simulate trusted-contact escalation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RescueSosInput"
+      responses:
+        "201":
+          description: SOS event recorded; no emergency services contacted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RescueSosEvent"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +216,178 @@ components:
           type: string
       required:
         - status
+    RescueIssueType:
+      type: string
+      enum: [flat_tire, battery, fuel, overheating, ev_battery, accident, mechanical, medical, towing, other]
+    RescuePriority:
+      type: string
+      enum: [low, medium, high, critical]
+    RescueStatus:
+      type: string
+      enum: [requested, responder_assigned, en_route, arrived, repair_in_progress, towing_requested, resolved, cancelled]
+    RescueResponder:
+      type: object
+      required: [id, name, specialty, rating, completedRescues, experienceYears, etaMinutes, distanceKm, verified, nightAvailable, femaleResponder, serviceCenter, available, reliability, supportedVehicles, tools]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        specialty: { type: string }
+        rating: { type: number }
+        completedRescues: { type: integer }
+        experienceYears: { type: integer }
+        etaMinutes: { type: integer }
+        distanceKm: { type: number }
+        verified: { type: boolean }
+        nightAvailable: { type: boolean }
+        femaleResponder: { type: boolean }
+        serviceCenter: { type: boolean }
+        available: { type: boolean }
+        reliability: { type: number }
+        supportedVehicles:
+          type: array
+          items: { type: string }
+        tools:
+          type: array
+          items: { type: string }
+    ResponderMatch:
+      allOf:
+        - $ref: "#/components/schemas/RescueResponder"
+        - type: object
+          required: [suitabilityScore, matchedExpertise, priceMin, priceMax]
+          properties:
+            suitabilityScore: { type: integer }
+            matchedExpertise: { type: boolean }
+            priceMin: { type: number }
+            priceMax: { type: number }
+    RescueTriageInput:
+      type: object
+      required: [description]
+      properties:
+        description: { type: string, minLength: 1, maxLength: 2000 }
+        issueType: { $ref: "#/components/schemas/RescueIssueType" }
+        imageAttached: { type: boolean, default: false }
+        night: { type: boolean, default: false }
+        weakNetwork: { type: boolean, default: false }
+        latitude: { type: number }
+        longitude: { type: number }
+    RescueTriage:
+      type: object
+      required: [issueType, probableIssue, responderType, priority, confidence, riskScore, questions, safetyGuidance, priceMin, priceMax, mode]
+      properties:
+        issueType: { $ref: "#/components/schemas/RescueIssueType" }
+        probableIssue: { type: string }
+        responderType: { type: string }
+        priority: { $ref: "#/components/schemas/RescuePriority" }
+        confidence: { type: integer }
+        riskScore: { type: integer }
+        questions:
+          type: array
+          items: { type: string }
+        safetyGuidance:
+          type: array
+          items: { type: string }
+        priceMin: { type: number }
+        priceMax: { type: number }
+        mode: { type: string }
+    ResponderMatchInput:
+      type: object
+      required: [issueType, latitude, longitude, safeMode, verifiedOnly, femaleResponderPreference, serviceCenterPreference, nightService]
+      properties:
+        issueType: { $ref: "#/components/schemas/RescueIssueType" }
+        latitude: { type: number }
+        longitude: { type: number }
+        safeMode: { type: boolean }
+        verifiedOnly: { type: boolean }
+        femaleResponderPreference: { type: boolean }
+        serviceCenterPreference: { type: boolean }
+        nightService: { type: boolean }
+        weakNetwork: { type: boolean, default: false }
+        vehicleType: { type: string }
+    RescueRequestInput:
+      type: object
+      required: [description, issueType, probableIssue, priority, riskScore, latitude, longitude, area, responderId, safeMode, trustedContactSharing, priceMin, priceMax]
+      properties:
+        description: { type: string, minLength: 1, maxLength: 2000 }
+        issueType: { $ref: "#/components/schemas/RescueIssueType" }
+        probableIssue: { type: string }
+        priority: { $ref: "#/components/schemas/RescuePriority" }
+        riskScore: { type: integer }
+        latitude: { type: number }
+        longitude: { type: number }
+        area: { type: string }
+        vehicleType: { type: string, default: "Car" }
+        responderId: { type: string }
+        safeMode: { type: boolean }
+        trustedContactSharing: { type: boolean }
+        priceMin: { type: number }
+        priceMax: { type: number }
+    RescueRequest:
+      type: object
+      required: [id, description, issueType, probableIssue, priority, status, riskScore, latitude, longitude, area, responderId, responderName, responderSpecialty, etaMinutes, distanceKm, safeMode, trustedContactSharing, priceMin, priceMax, createdAt, replanCount]
+      properties:
+        id: { type: integer }
+        description: { type: string }
+        issueType: { $ref: "#/components/schemas/RescueIssueType" }
+        probableIssue: { type: string }
+        priority: { $ref: "#/components/schemas/RescuePriority" }
+        status: { $ref: "#/components/schemas/RescueStatus" }
+        riskScore: { type: integer }
+        latitude: { type: number }
+        longitude: { type: number }
+        area: { type: string }
+        vehicleType: { type: string }
+        responderId: { type: string }
+        responderName: { type: string }
+        responderSpecialty: { type: string }
+        etaMinutes: { type: integer }
+        distanceKm: { type: number }
+        safeMode: { type: boolean }
+        trustedContactSharing: { type: boolean }
+        priceMin: { type: number }
+        priceMax: { type: number }
+        replanCount: { type: integer }
+        replanNote: { type: ["string", "null"] }
+        createdAt: { type: string, format: date-time }
+    RescueOverview:
+      type: object
+      required: [activeRequests, completedToday, verifiedResponders, averageEta, recentRequests]
+      properties:
+        activeRequests: { type: integer }
+        completedToday: { type: integer }
+        verifiedResponders: { type: integer }
+        averageEta: { type: integer }
+        recentRequests:
+          type: array
+          items:
+            $ref: "#/components/schemas/RescueRequest"
+    RescueStatusInput:
+      type: object
+      required: [status]
+      properties:
+        status: { $ref: "#/components/schemas/RescueStatus" }
+    RescueReplanInput:
+      type: object
+      properties:
+        note: { type: string, maxLength: 500 }
+    RescueSosInput:
+      type: object
+      required: [emergencyType, latitude, longitude, area, trustedContactSharing]
+      properties:
+        rescueId: { type: integer }
+        emergencyType: { type: string }
+        latitude: { type: number }
+        longitude: { type: number }
+        area: { type: string }
+        trustedContactSharing: { type: boolean }
+    RescueSosEvent:
+      type: object
+      required: [id, emergencyType, area, contactNotice, emergencyServicesContacted, createdAt]
+      properties:
+        id: { type: integer }
+        rescueId: { type: ["integer", "null"] }
+        emergencyType: { type: string }
+        area: { type: string }
+        contactNotice: { type: string }
+        emergencyServicesContacted: { type: boolean }
+        createdAt: { type: string, format: date-time }
 
